@@ -1,26 +1,145 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --canvas: #f3ece2;
+  --canvas-mid: #ebe3d6;
+  --ink: #4a433c;
+  --muted: #7d7268;
+  --accent: #c65e52;
+  --accent-mid: #b54d42;
+  --accent-foreground: #fff9f6;
+  --accent-soft: rgba(198, 94, 82, 0.12);
+  --paper: #fdf9f3;
+  --paper-warm: #faf5ec;
+  --paper-edge: #e0d5c8;
+  --stroke: rgba(74, 67, 60, 0.11);
+  --stroke-strong: rgba(74, 67, 60, 0.16);
+  --glow-1: rgba(232, 205, 180, 0.65);
+  --glow-2: rgba(198, 94, 82, 0.22);
+  --shadow-ticket: 0 2px 0 0 rgba(255, 255, 255, 0.65) inset,
+    0 14px 40px -18px rgba(74, 67, 60, 0.22);
+  --ease-out-soft: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out-soft: cubic-bezier(0.77, 0, 0.175, 1);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-background: var(--canvas);
+  --color-foreground: var(--ink);
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-cormorant), ui-serif, Georgia, serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--canvas);
+  background-image: radial-gradient(
+      ellipse 120% 80% at 50% -20%,
+      var(--glow-1),
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 90% 60% at 100% 50%,
+      rgba(198, 94, 82, 0.06),
+      transparent 45%
+    ),
+    radial-gradient(
+      ellipse 70% 50% at 0% 80%,
+      rgba(224, 213, 200, 0.5),
+      transparent 50%
+    );
+  background-attachment: fixed;
+  color: var(--ink);
+  font-feature-settings: "kern" 1, "liga" 1;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.78s var(--ease-out-soft) forwards;
+}
+
+/* /mensagem — fade-in escalonado */
+@keyframes mensagem-soft-fade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.mensagem-soft-fade {
+  opacity: 0;
+  animation: mensagem-soft-fade 0.82s var(--ease-out-soft) forwards;
+  animation-delay: var(--fade-delay, 0ms);
+}
+
+@keyframes mensagem-preparing-breath {
+  0%,
+  100% {
+    opacity: 0.42;
+  }
+  50% {
+    opacity: 0.92;
+  }
+}
+
+.mensagem-preparing {
+  animation: mensagem-preparing-breath 1.8s var(--ease-in-out-soft) infinite;
+}
+
+@keyframes impact-progress-grow {
+  from {
+    width: 0%;
+  }
+  to {
+    width: var(--impact-progress-target);
+  }
+}
+
+.impact-progress-fill {
+  width: 0%;
+  background: linear-gradient(
+    90deg,
+    rgba(198, 94, 82, 0.42) 0%,
+    rgba(198, 94, 82, 0.8) 55%,
+    rgba(181, 77, 66, 0.9) 100%
+  );
+  box-shadow: 0 0 0 1px rgba(198, 94, 82, 0.1) inset;
+}
+
+.impact-progress-fill[data-animated="true"] {
+  animation: impact-progress-grow 1200ms var(--ease-out-soft) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mensagem-soft-fade {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .mensagem-preparing {
+    animation: none;
+    opacity: 1;
+  }
+
+  .impact-progress-fill {
+    animation: none;
+  }
 }
