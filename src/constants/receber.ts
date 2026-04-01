@@ -7,10 +7,10 @@ export const RECEBER_EXPECTATION = {
 } as const;
 
 export const PAYMENT_AMOUNT_OPTIONS = [
-  { value: 1, label: "R$1", meaning: "Um gesto simples" },
+  { value: 1, label: "R$1", meaning: "Um gesto simples", recommended: false },
   { value: 5, label: "R$5", meaning: "Um pequeno apoio (recomendado)", recommended: true },
-  { value: 10, label: "R$10", meaning: "Ja faz diferenca" },
-  { value: 20, label: "R$20", meaning: "Um gesto mais generoso" },
+  { value: 10, label: "R$10", meaning: "Ja faz diferenca", recommended: false },
+  { value: 20, label: "R$20", meaning: "Um gesto mais generoso", recommended: false },
 ] as const;
 
 export const DEFAULT_PAYMENT_AMOUNT = 1 as const;
