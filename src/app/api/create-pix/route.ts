@@ -52,9 +52,9 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  const valor = allowedValues.includes(requestedAmount)
-    ? requestedAmount
-    : defaultValue;
+  const valor = allowedValues.some((v) => v === requestedAmount)
+  ? requestedAmount
+  : defaultValue;
   if (valor <= 0) {
     return NextResponse.json(
       { error: "Valor inválido. O valor deve ser maior que zero." },
