@@ -20,11 +20,8 @@ export const metadata: Metadata = {
   title: "Mensageiro do Bem · Uma mensagem no momento certo",
   description:
     "Receba uma mensagem carinhosa e inspiradora. Simples, rápido e feito para emocionar.",
-};
-
-export const metadata = {
   icons: {
-    icon: "/favicon.png",
+    icon: "/favicon.ico",
   },
 };
 
