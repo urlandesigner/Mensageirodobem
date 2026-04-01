@@ -80,7 +80,7 @@ export function MensagemAnimated({
           role="status"
           aria-live="polite"
         >
-          💛 Sua mensagem chegou...
+          Sua mensagem chegou…
         </p>
       </div>
     );
@@ -97,14 +97,14 @@ export function MensagemAnimated({
             {momentLine}
           </time>
           <h1 className="mt-5 font-serif text-[1.9rem] font-medium leading-[1.2] tracking-[-0.02em] text-[var(--ink)] md:mt-6 md:text-[2.2rem]">
-            Uma mensagem para voce.
+            Uma mensagem para você.
           </h1>
         </div>
       </Reveal>
 
       <Reveal delayMs={120} className="mt-12 sm:mt-14">
         <p className="mb-3 font-sans text-sm font-medium text-[var(--ink)]/85 sm:text-[0.95rem]">
-          Talvez isso seja o que voce precisava hoje:
+          Talvez isso seja o que você precisava hoje:
         </p>
         <div className="mx-auto max-w-2xl rounded-3xl border border-[var(--stroke)] bg-[var(--paper)]/78 px-6 py-7 shadow-[var(--shadow-ticket)] sm:px-8 sm:py-8 lg:max-w-3xl">
           <p className="whitespace-pre-line font-serif text-[1.14rem] font-normal leading-[1.7] text-[var(--ink)]/92 sm:text-[1.3rem] sm:leading-[1.75]">
@@ -115,13 +115,10 @@ export function MensagemAnimated({
 
       <Reveal delayMs={460} className="mt-14 sm:mt-16">
         <div className="flex flex-col items-center gap-6">
-          <p className="text-sm text-[var(--muted)]/90">
-            💛 As vezes, e so isso que a gente precisava.
-          </p>
           <p className="text-sm leading-relaxed text-[var(--muted)]/90">
             {amountLabel
-              ? `💛 Seu gesto de ${amountLabel} ja esta ajudando a fazer isso acontecer.`
-              : "💛 Esse gesto tambem esta ajudando alguem."}
+              ? `Seu gesto de ${amountLabel} também ajuda a fazer isso acontecer.`
+              : "Esse gesto também ajuda alguém."}
           </p>
           <PrimaryCta
             href="/receber"

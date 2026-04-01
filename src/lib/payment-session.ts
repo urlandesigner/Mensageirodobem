@@ -2,11 +2,15 @@ export const PAYMENT_SESSION_STORAGE_KEY = "mdb_payment_session";
 
 export type PaymentSessionStatus = "pending" | "confirmed";
 
+export type PaymentProvider = "mercado-pago" | "asaas";
+
 export type PaymentSession = {
   paymentId: string;
   paymentStatus: PaymentSessionStatus;
   createdAt: string;
   amount?: number;
+  /** Gateway usado na cobrança atual (para consulta de status no servidor). */
+  paymentProvider?: PaymentProvider;
   /** Preenchido após pagamento confirmado, antes de abrir /mensagem */
   messageId?: string;
 };
@@ -34,11 +38,16 @@ export function readPaymentSession(): PaymentSession | null {
       typeof rec.amount === "number" && Number.isFinite(rec.amount)
         ? rec.amount
         : undefined;
+    const paymentProvider =
+      rec.paymentProvider === "mercado-pago" || rec.paymentProvider === "asaas"
+        ? rec.paymentProvider
+        : undefined;
     return {
       paymentId,
       paymentStatus: st,
       createdAt,
       amount,
+      paymentProvider,
       messageId,
     };
   } catch {

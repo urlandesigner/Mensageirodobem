@@ -20,9 +20,6 @@ export async function POST(request: Request) {
     );
   }
 
-  console.log("ENV:", !!process.env.ASAAS_API_KEY);
-  console.log("API URL:", process.env.ASAAS_API_URL ?? "");
-
   const asaasKeyMessage = requireAsaasApiKeyOrMessage();
   if (asaasKeyMessage) {
     return NextResponse.json(

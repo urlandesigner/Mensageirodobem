@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  DEFAULT_PAYMENT_AMOUNT,
-  PAYMENT_AMOUNT_OPTIONS,
-} from "@/constants/receber";
+import { PAYMENT_AMOUNT_OPTIONS } from "@/constants/receber";
 
 type AmountSelectorProps = {
   value: number;
@@ -20,10 +17,18 @@ export function AmountSelector({ value, onChange }: AmountSelectorProps) {
         id="amount-selector-heading"
         className="font-serif text-[1.35rem] font-semibold leading-tight text-[var(--ink)] sm:text-[1.5rem]"
       >
-        💛 Escolha como você quer participar
+        {PAYMENT_AMOUNT_OPTIONS.length > 1
+          ? "Escolha como você quer participar"
+          : "Sua participação"}
       </h2>
 
-      <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+      <div
+        className={
+          PAYMENT_AMOUNT_OPTIONS.length > 1
+            ? "mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-3"
+            : "mt-5 mx-auto grid max-w-sm grid-cols-1 gap-2.5"
+        }
+      >
         {PAYMENT_AMOUNT_OPTIONS.map((option) => {
           const selected = option.value === value;
           const recommended = Boolean(option.recommended);
@@ -55,11 +60,15 @@ export function AmountSelector({ value, onChange }: AmountSelectorProps) {
         })}
       </div>
 
-      {value === DEFAULT_PAYMENT_AMOUNT ? (
+      {PAYMENT_AMOUNT_OPTIONS.length > 1 ? (
         <p className="mt-4 text-xs text-[var(--muted)]">
-          Você pode seguir com R$1 — ou escolher ir um pouco além 💛
+          Você pode seguir com R$1 — ou escolher ir um pouco além.
         </p>
-      ) : null}
+      ) : (
+        <p className="mt-4 text-center text-xs text-[var(--muted)]">
+          Pagamento único de R$1 via PIX.
+        </p>
+      )}
     </section>
   );
 }

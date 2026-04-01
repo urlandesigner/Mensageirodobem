@@ -1,8 +1,8 @@
 export type ImpactStats = {
+  /** Soma de `mensageiro.payments.amount` com `status = 'paid'` (fonte: Supabase via API). */
   totalArrecadado: number;
-  totalDestinado: number;
+  /** Meta em reais para a barra e para “faltam R$ …” (atualmente R$50). */
   meta: number;
-  primeiraDoacaoRealizada: boolean;
 };
 
 export type ImpactViewModel = {

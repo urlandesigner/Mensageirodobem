@@ -9,16 +9,11 @@ import {
   withAsaasDiagnostics,
 } from "@/lib/asaas";
 import { PAYMENT_AMOUNT_OPTIONS } from "@/constants/receber";
+import { createPendingPayment } from "@/lib/payments/repository";
 
 type Body = { customerId?: string; amount?: number };
 
 export async function POST(request: Request) {
-  console.log("ENV:", !!process.env.ASAAS_API_KEY);
-  console.log(
-    "[create-payment] ASAAS_API_URL =",
-    process.env.ASAAS_API_URL ?? "(undefined)",
-  );
-
   const asaasKeyMessage = requireAsaasApiKeyOrMessage();
   if (asaasKeyMessage) {
     return NextResponse.json(
@@ -32,7 +27,7 @@ export async function POST(request: Request) {
   }
 
   const allowedValues = PAYMENT_AMOUNT_OPTIONS.map((o) => o.value);
-  const defaultValue = allowedValues.includes(1) ? 1 : allowedValues[0] ?? 5;
+  const defaultValue = allowedValues.includes(1) ? 1 : allowedValues[0] ?? 1;
 
   let body: Body = {};
   try {
@@ -68,6 +63,12 @@ export async function POST(request: Request) {
         };
       },
     );
+
+    await createPendingPayment({
+      gateway: "asaas",
+      external_payment_id: out.id,
+      amount: value,
+    });
 
     return NextResponse.json(out);
   } catch (e) {

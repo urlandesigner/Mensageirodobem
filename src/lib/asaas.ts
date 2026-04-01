@@ -1,5 +1,17 @@
 import "server-only";
 
+/** Logs detalhados de request/response (prefixo de chave, corpo completo). Desligado em produção salvo `ASAAS_DEBUG=true`. */
+function asaasDiagnosticsEnabled(): boolean {
+  return (
+    process.env.ASAAS_DEBUG === "true" ||
+    process.env.NODE_ENV === "development"
+  );
+}
+
+function diagLog(...args: Parameters<typeof console.log>): void {
+  if (asaasDiagnosticsEnabled()) console.log(...args);
+}
+
 /**
  * Cliente mínimo da API Asaas v3 (servidor apenas).
  * Sandbox: https://api-sandbox.asaas.com/v3
@@ -30,15 +42,15 @@ export function withAsaasDiagnostics<T>(
   const rawEnvUrl = process.env.ASAAS_API_URL ?? "(não definido)";
   const base = getBaseUrl();
   const key = process.env.ASAAS_API_KEY?.trim();
-  console.log(`[Asaas diag:${routeTag}] ASAAS_API_URL (env)=`, rawEnvUrl);
-  console.log(`[Asaas diag:${routeTag}] base URL resolvida=`, base);
-  console.log(
+  diagLog(`[Asaas diag:${routeTag}] ASAAS_API_URL (env)=`, rawEnvUrl);
+  diagLog(`[Asaas diag:${routeTag}] base URL resolvida=`, base);
+  diagLog(
     `[Asaas diag:${routeTag}] ASAAS_API_KEY definida=`,
     Boolean(key),
     key ? `length=${key.length}` : "",
   );
   if (key) {
-    console.log(
+    diagLog(
       `[Asaas diag:${routeTag}] ASAAS_API_KEY prefixo (4 primeiros chars)=`,
       key.slice(0, 4),
     );
@@ -83,7 +95,7 @@ async function asaasFetchRaw(
 ): Promise<AsaasFetchResult> {
   const tag = diagTag();
   const method = init?.method ?? "GET";
-  console.log(`[Asaas diag:${tag}] → ${method} ${url}`);
+  diagLog(`[Asaas diag:${tag}] → ${method} ${url}`);
 
   let res: Response;
   try {
@@ -107,8 +119,8 @@ async function asaasFetchRaw(
   }
 
   const bodyText = await res.text();
-  console.log(`[Asaas diag:${tag}] ← HTTP ${res.status} ${url}`);
-  console.log(`[Asaas diag:${tag}] corpo (completo):`, bodyText);
+  diagLog(`[Asaas diag:${tag}] ← HTTP ${res.status} ${url}`);
+  diagLog(`[Asaas diag:${tag}] corpo (completo):`, bodyText);
 
   return { status: res.status, bodyText, url };
 }

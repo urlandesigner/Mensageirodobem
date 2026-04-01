@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import {
   DEFAULT_PAYMENT_AMOUNT,
   RECEBER_EXPECTATION,
+  RECEBER_PAYMENT_RECIPIENT_HINT,
+  REQUIRES_ASAAS_FOR_PAYMENTS,
 } from "@/constants/receber";
 import { pickRandomMessage } from "@/lib/messages";
 import {
@@ -51,24 +53,15 @@ type AsaasCreatePixResponse = {
   payload?: string;
 } & AsaasApiErrorFields;
 
+/** Mensagem curta para o usuário — sem URL/corpo de API (evita vazar detalhes técnicos). */
 function describeAsaasApiFailure(
   data: AsaasApiErrorFields,
   fallback: string,
 ): string {
-  let s = data.error ?? fallback;
-  if (data.asaasRequestUrl) {
-    s += `\n\nURL: ${data.asaasRequestUrl}`;
-  }
-  if (
-    data.asaasHttpStatus != null &&
-    data.asaasHttpStatus !== 0
-  ) {
-    s += `\nHTTP: ${data.asaasHttpStatus}`;
-  }
-  if (data.asaasResponseBody) {
-    s += `\n\nCorpo da resposta Asaas:\n${data.asaasResponseBody}`;
-  }
-  return s;
+  const raw = typeof data.error === "string" ? data.error.trim() : "";
+  if (!raw) return fallback;
+  const firstLine = raw.split("\n")[0]?.trim() ?? raw;
+  return firstLine.length > 280 ? `${firstLine.slice(0, 277)}…` : firstLine;
 }
 
 function formatCurrency(value: number): string {
@@ -83,7 +76,7 @@ function formatCurrency(value: number): string {
 function stepsForAmount(): readonly string[] {
   return [
     "Abra o PIX do seu banco.",
-    "Use o QR Code ou copie o codigo.",
+    "Use o QR Code ou copie o código.",
     "Depois, confirme aqui para abrir sua mensagem.",
   ] as const;
 }
@@ -105,7 +98,7 @@ function normalizePaymentResponse(
       typeof mp.qrCodeBase64 === "string" ? mp.qrCodeBase64 : "";
     if (!paymentId || !payload || !qrCodeBase64) {
       throw new Error(
-        "💛 Tivemos um pequeno problema ao preparar seu pagamento. Tente novamente.",
+        "Tivemos um pequeno problema ao preparar seu pagamento. Tente novamente.",
       );
     }
     return {
@@ -184,18 +177,21 @@ export function ReceberView() {
   /** Cobrança ainda não confirmada pelo Asaas — mostra copy amigável em vez de “Status: PENDING”. */
   const [awaitingPaymentConfirm, setAwaitingPaymentConfirm] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
     setLoadError(null);
     setPayment(null);
     clearPaymentSession();
+
+    if (!REQUIRES_ASAAS_FOR_PAYMENTS) {
+      setLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setLoading(true);
 
     (async () => {
       const readStored = () =>
@@ -295,13 +291,14 @@ export function ReceberView() {
         paymentStatus: "pending",
         createdAt: new Date().toISOString(),
         amount: selectedAmount,
+        paymentProvider: provider === "mercado-pago" ? "mercado-pago" : "asaas",
       });
       setPayment(normalized);
     } catch (e) {
       const rawMsg = e instanceof Error ? e.message : "Erro ao criar pagamento.";
       const msg =
         rawMsg.includes("Mercado Pago") || rawMsg.includes("preparar seu pagamento")
-          ? "💛 Tivemos um pequeno problema ao preparar seu pagamento. Tente novamente."
+          ? "Tivemos um pequeno problema ao preparar seu pagamento. Tente novamente."
           : rawMsg;
       setLoadError(msg);
     } finally {
@@ -327,12 +324,16 @@ export function ReceberView() {
         ? readPaymentSession()?.paymentId?.trim() ?? ""
         : "");
     if (!paymentId) return;
+    const session = typeof window !== "undefined" ? readPaymentSession() : null;
+    const statusProvider =
+      session?.paymentProvider ??
+      (selectedAmount === 1 ? "mercado-pago" : "asaas");
     setChecking(true);
     setPayError(null);
     setAwaitingPaymentConfirm(false);
     try {
       const res = await fetch(
-        `/api/payment-status?id=${encodeURIComponent(paymentId)}`,
+        `/api/payment-status?id=${encodeURIComponent(paymentId)}&provider=${encodeURIComponent(statusProvider)}`,
       );
       const data = (await res.json()) as {
         paid?: boolean;
@@ -362,6 +363,7 @@ export function ReceberView() {
           paymentStatus: "confirmed",
           createdAt,
           amount: prev?.amount,
+          paymentProvider: prev?.paymentProvider ?? statusProvider,
           messageId: message.id,
         });
         router.push(`/mensagem?id=${encodeURIComponent(message.id)}`);
@@ -392,7 +394,7 @@ export function ReceberView() {
 
         <header className="mt-8 text-center animate-fade-up opacity-0 [animation-delay:80ms] [animation-fill-mode:forwards]">
           <p className="text-[0.7rem] font-semibold uppercase tracking-[0.28em] text-[var(--muted)]">
-            {loading ? "Preparando seu momento..." : "Quase la"}
+            {loading ? "Preparando seu momento..." : "Quase lá"}
           </p>
           <h1 className="mt-3 font-serif text-[1.75rem] font-semibold leading-tight tracking-[-0.02em] text-[var(--ink)] sm:text-[2rem]">
             {RECEBER_EXPECTATION.title}
@@ -417,7 +419,7 @@ export function ReceberView() {
 
         <div className="mt-6 flex flex-col items-center gap-3">
           <p className="text-center text-sm leading-relaxed text-[var(--muted)]">
-            💛 Esse pequeno gesto ja comeca a fazer diferenca
+            Esse pequeno gesto já começa a fazer diferença
           </p>
           <button
             type="button"
@@ -429,16 +431,18 @@ export function ReceberView() {
             onClick={createPaymentForSelectedAmount}
             className="inline-flex min-h-[3.25rem] w-full max-w-sm items-center justify-center rounded-full bg-[#C9785C] px-8 py-3.5 text-center text-[0.9375rem] font-semibold tracking-wide text-white shadow-[0_4px_24px_-6px_rgba(201,120,92,0.55),0_1px_0_0_rgba(255,255,255,0.2)_inset] transition duration-200 hover:!brightness-[1.06] hover:shadow-[0_6px_28px_-6px_rgba(201,120,92,0.5)] disabled:cursor-not-allowed disabled:opacity-55"
           >
-            {creatingPayment ? "💛 Preparando seu pagamento..." : "💛 Continuar"}
+            {creatingPayment ? "Preparando seu pagamento..." : "Continuar"}
           </button>
-          <p className="text-center text-xs text-[var(--muted)]">
-            Troque o valor quando quiser, sem complicacao.
-          </p>
+          {REQUIRES_ASAAS_FOR_PAYMENTS ? (
+            <p className="text-center text-xs text-[var(--muted)]">
+              Troque o valor quando quiser, sem complicação.
+            </p>
+          ) : null}
         </div>
 
         <ol className="animate-fade-up mt-10 space-y-3 rounded-2xl border border-dashed border-[var(--stroke-strong)] bg-[var(--paper)] px-5 py-6 opacity-0 shadow-[var(--shadow-ticket)] [animation-delay:140ms] [animation-fill-mode:forwards] sm:px-6">
           <li className="text-sm font-semibold leading-relaxed text-[var(--ink)] sm:text-[0.9375rem]">
-            💛 Como enviar
+            Como enviar
           </li>
           {stepsForAmount().map((line, i) => (
             <li
@@ -477,7 +481,7 @@ export function ReceberView() {
         {payment && !loadError && (
           <>
             <p className="mt-7 text-center text-sm font-medium text-[var(--ink)]/85">
-              💛 Voce escolheu contribuir com {formatCurrency(selectedAmount)}
+              Você escolheu contribuir com {formatCurrency(selectedAmount)}
             </p>
             <section
               className="mt-8 rounded-2xl border border-[var(--paper-edge)] bg-[var(--paper-warm)]/90 px-5 py-6 shadow-[var(--shadow-ticket)] sm:px-6 sm:py-7"
@@ -498,10 +502,10 @@ export function ReceberView() {
 
               <div className="mt-6 border-t border-[var(--stroke)] pt-6">
                 <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                  Codigo PIX Copia e Cola
+                  Código PIX copia e cola
                 </p>
                 <p className="mt-3 break-all rounded-xl border border-[var(--stroke)] bg-white/90 px-4 py-3 text-left font-mono text-[0.7rem] leading-relaxed text-[var(--ink)] sm:text-[0.75rem]">
-                  {payment.payload || "Codigo indisponivel no momento."}
+                  {payment.payload || "Código indisponível no momento."}
                 </p>
                 <div className="mt-4 flex justify-center">
                   <button
@@ -528,6 +532,14 @@ export function ReceberView() {
               <p className="mx-auto mt-2 max-w-sm text-center text-sm text-[var(--muted)]">
                 Escaneie com o app do seu banco e finalize quando quiser.
               </p>
+              <div
+                className="mx-auto mt-5 max-w-md rounded-xl border border-[var(--stroke)] bg-[var(--paper-warm)]/90 px-4 py-3 text-center shadow-[0_1px_0_0_rgba(255,255,255,0.25)_inset] sm:px-5"
+                role="note"
+              >
+                <p className="text-sm leading-relaxed text-[var(--muted)]">
+                  {RECEBER_PAYMENT_RECIPIENT_HINT}
+                </p>
+              </div>
               <div className="mt-8 flex min-h-[200px] items-center justify-center">
                 {/* eslint-disable-next-line @next/next/no-img-element -- data URL da API / qrcode */}
                 <img
@@ -547,30 +559,30 @@ export function ReceberView() {
             onClick={handlePaid}
             className="inline-flex min-h-[3.25rem] w-full max-w-sm items-center justify-center rounded-full px-8 py-3.5 text-center text-[0.9375rem] font-semibold tracking-wide text-white shadow-[0_4px_24px_-6px_rgba(201,120,92,0.55),0_1px_0_0_rgba(255,255,255,0.2)_inset] transition duration-200 hover:!brightness-[1.06] hover:shadow-[0_6px_28px_-6px_rgba(201,120,92,0.5)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C9785C] enabled:cursor-pointer enabled:bg-[#C9785C] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:min-w-[18rem]"
           >
-            {checking ? "💛 Conferindo..." : "💛 Ja enviei"}
+            {checking ? "Conferindo..." : "Já enviei"}
           </button>
           <p className="text-center text-xs font-medium text-[var(--muted)]">
             Leva poucos segundos • Sem cadastro
           </p>
           {checking ? (
             <PaymentStatusCard
-              title="💛 Estamos conferindo seu envio"
-              description="A confirmacao pode levar alguns segundos para aparecer por aqui."
+              title="Estamos conferindo seu envio"
+              description="A confirmação pode levar alguns segundos para aparecer por aqui."
             />
           ) : null}
           {awaitingPaymentConfirm && !checking ? (
             <PaymentStatusCard
-              title="💛 Ainda nao apareceu por aqui"
-              description="As vezes leva um pouco mais para atualizar."
-              hint="Se ainda nao aparecer, tente novamente em instantes."
+              title="Ainda não apareceu por aqui"
+              description="Às vezes leva um pouco mais para atualizar."
+              hint="Se ainda não aparecer, tente novamente em instantes."
               tone="warning"
             />
           ) : null}
           {payError ? (
             <PaymentStatusCard
-              title="💛 Tivemos um pequeno problema ao verificar"
+              title="Não conseguimos confirmar agora"
               description={payError}
-              hint="Tente novamente."
+              hint="Tente novamente em instantes."
               tone="error"
             />
           ) : null}

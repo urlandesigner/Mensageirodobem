@@ -13,11 +13,11 @@ type MpPixResponse = {
 };
 
 export async function POST() {
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN?.trim();
-  console.log(
-    "[test-pix] MERCADO_PAGO_ACCESS_TOKEN carregado:",
-    Boolean(accessToken),
-  );
   if (!accessToken) {
     return NextResponse.json(
       {

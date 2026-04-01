@@ -1,7 +1,9 @@
 "use client";
 
-import { IMPACT_MOCK_STATS } from "@/constants/impact";
+import { IMPACT_INITIAL_STATS, IMPACT_META_BRL } from "@/constants/impact";
+import { LANDING_HERO } from "@/constants/landing";
 import { buildImpactViewModel } from "@/lib/impact";
+import type { ImpactStats } from "@/types/impact";
 import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
 import { PrimaryCta } from "./PrimaryCta";
@@ -33,9 +35,45 @@ function SoftProgress({
 }
 
 export function ImpactTrustSection() {
-  const view = buildImpactViewModel(IMPACT_MOCK_STATS);
+  const [stats, setStats] = useState<ImpactStats>(IMPACT_INITIAL_STATS);
+  const view = buildImpactViewModel(stats);
   const sectionRef = useRef<HTMLElement | null>(null);
   const [animateProgress, setAnimateProgress] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/impact-arrecadacao")
+      .then((r) => r.json())
+      .then(
+        (d: {
+          totalArrecadado?: unknown;
+          meta?: unknown;
+        }) => {
+          if (cancelled) return;
+          const raw = d.totalArrecadado;
+          const total =
+            typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
+          const metaRaw = d.meta;
+          const meta =
+            typeof metaRaw === "number" &&
+            Number.isFinite(metaRaw) &&
+            metaRaw > 0
+              ? metaRaw
+              : IMPACT_META_BRL;
+          setStats({
+            totalArrecadado: total,
+            meta,
+          });
+        },
+      )
+      .catch(() => {
+        if (cancelled) return;
+        setStats(IMPACT_INITIAL_STATS);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const node = sectionRef.current;
@@ -99,7 +137,7 @@ export function ImpactTrustSection() {
             <div className="mt-10">
               <div>
                 <PrimaryCta href="/receber" className="sm:min-w-[15rem]">
-                  Quero receber minha mensagem
+                  {LANDING_HERO.ctaLabel}
                 </PrimaryCta>
               </div>
               <p className="mt-5 text-[1.02rem] font-medium leading-relaxed text-[var(--ink)]/92 sm:text-[1.08rem]">

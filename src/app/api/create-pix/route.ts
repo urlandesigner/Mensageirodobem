@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { PAYMENT_AMOUNT_OPTIONS } from "@/constants/receber";
+import { createPendingPayment } from "@/lib/payments/repository";
 
 type Body = { value?: number; valor?: number; amount?: number };
 
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
   }
 
   const allowedValues = PAYMENT_AMOUNT_OPTIONS.map((o) => o.value);
-  const defaultValue = allowedValues.includes(1) ? 1 : allowedValues[0] ?? 5;
+  const defaultValue = allowedValues.includes(1) ? 1 : allowedValues[0] ?? 1;
 
   let body: Body = {};
   try {
@@ -65,11 +66,15 @@ export async function POST(request: Request) {
   const payerEmail =
     process.env.MERCADO_PAGO_TEST_PAYER_EMAIL?.trim() ??
     "pagamento@mensageirodobem.com";
-  console.log("[create-pix] iniciando criação PIX", {
-    valueRequested: requestedAmount,
-    valueUsed: valor,
-    hasToken: Boolean(accessToken),
-  });
+
+  const payload = {
+    transaction_amount: valor,
+    payment_method_id: "pix",
+    description: "Mensagem — Mensageiro do Bem",
+    payer: {
+      email: payerEmail,
+    },
+  } as const;
 
   let response: Response;
   try {
@@ -80,14 +85,7 @@ export async function POST(request: Request) {
         "Content-Type": "application/json",
         "X-Idempotency-Key": crypto.randomUUID(),
       },
-      body: JSON.stringify({
-        transaction_amount: valor,
-        payment_method_id: "pix",
-        description: "Mensagem — Mensageiro do Bem",
-        payer: {
-          email: payerEmail,
-        },
-      }),
+      body: JSON.stringify(payload),
       cache: "no-store",
     });
   } catch (e) {
@@ -96,8 +94,6 @@ export async function POST(request: Request) {
   }
 
   const text = await response.text();
-  console.log("[create-pix] Mercado Pago HTTP status:", response.status);
-  console.log("[create-pix] Mercado Pago raw response:", text);
   let data: MercadoPagoPaymentResponse | Record<string, unknown> = {};
   try {
     data = text
@@ -108,14 +104,11 @@ export async function POST(request: Request) {
   }
 
   if (!response.ok) {
-    console.error("[create-pix] erro Mercado Pago", {
-      httpStatus: response.status,
-    });
+    console.error("[create-pix] Mercado Pago HTTP", response.status);
     return NextResponse.json(
       {
         error: "Mercado Pago retornou erro ao criar PIX.",
         httpStatus: response.status,
-        mercadoPagoResponse: data,
       },
       { status: 502 },
     );
@@ -129,7 +122,6 @@ export async function POST(request: Request) {
       {
         error: "Não foi possível gerar o QR Code PIX no momento.",
         httpStatus: response.status,
-        mercadoPagoResponse: data,
       },
       { status: 502 },
     );
@@ -145,14 +137,12 @@ export async function POST(request: Request) {
     qrCode,
     qrCodeBase64: qrBase64,
   };
-  console.log("[create-pix] PIX criado com sucesso", {
-    paymentId: normalized.paymentId,
-    status: normalized.status,
+
+  await createPendingPayment({
+    gateway: "mercado_pago",
+    external_payment_id: normalized.paymentId,
     amount: normalized.amount,
-    hasQrCode: Boolean(normalized.qrCode),
-    hasQrCodeBase64: Boolean(normalized.qrCodeBase64),
   });
-  console.log("[create-pix] normalized payload:", normalized);
 
   return NextResponse.json(normalized);
 }

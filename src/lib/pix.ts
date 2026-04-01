@@ -1,9 +1,9 @@
 import { toDataURL } from "qrcode";
 
 /** Valor fixo solicitado (string com ponto, padrão PIX). */
-export const PIX_FIXED_AMOUNT = "5.00" as const;
+export const PIX_FIXED_AMOUNT = "1.00" as const;
 
-export const PIX_FIXED_AMOUNT_LABEL = "R$ 5,00" as const;
+export const PIX_FIXED_AMOUNT_LABEL = "R$ 1,00" as const;
 
 const GUI = "br.gov.bcb.pix";
 
