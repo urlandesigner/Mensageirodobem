@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     typeof body.customerId === "string" ? body.customerId.trim() : "";
   const requestedAmount =
     typeof body.amount === "number" ? body.amount : defaultValue;
-  const value = allowedValues.includes(requestedAmount)
+  const value = allowedValues.some((v) => v === requestedAmount)
     ? requestedAmount
     : defaultValue;
 
