@@ -22,6 +22,12 @@ export const metadata: Metadata = {
     "Receba uma mensagem carinhosa e inspiradora. Simples, rápido e feito para emocionar.",
 };
 
+export const metadata = {
+  icons: {
+    icon: "/favicon.png",
+  },
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
