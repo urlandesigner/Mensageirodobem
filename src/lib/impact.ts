@@ -36,7 +36,7 @@ export function buildImpactViewModel(stats: ImpactStats): ImpactViewModel {
       : `A meta de ${metaLabel} para a próxima ajuda foi atingida.`;
 
   return {
-    title: "💛 Pequenos valores, impacto real",
+    title: "Pequenos valores, impacto real",
     highlightedAmount: `${formatCurrencyBRL(totalArrecadado)} arrecadados até agora`,
     amountComplement: "",
     progressHint,

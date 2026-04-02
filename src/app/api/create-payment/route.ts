@@ -1,3 +1,7 @@
+/**
+ * Legado Asaas — não é mais chamado pela UI (`/receber` usa só `/api/create-pix` + Mercado Pago).
+ * Mantido para testes manuais ou integrações antigas; pode ser removido quando o Asaas sair do deploy.
+ */
 import { NextResponse } from "next/server";
 import {
   asaasErrorJson,

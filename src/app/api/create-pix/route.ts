@@ -30,7 +30,9 @@ export async function POST(request: Request) {
   }
 
   const allowedValues = PAYMENT_AMOUNT_OPTIONS.map((o) => o.value);
-  const defaultValue = allowedValues.includes(1) ? 1 : allowedValues[0] ?? 1;
+  const isAllowedAmount = (n: number) =>
+    PAYMENT_AMOUNT_OPTIONS.some((o) => o.value === n);
+  const defaultValue = allowedValues.includes(1) ? 1 : (allowedValues[0] ?? 1);
 
   let body: Body = {};
   try {
@@ -39,26 +41,39 @@ export async function POST(request: Request) {
     body = {};
   }
 
-  const requestedAmount =
+  const fromBody =
     typeof body.value === "number"
       ? body.value
       : typeof body.valor === "number"
-      ? body.valor
-      : typeof body.amount === "number"
-        ? body.amount
-        : defaultValue;
-  if (!Number.isFinite(requestedAmount)) {
-    return NextResponse.json(
-      { error: "Valor inválido. Envie um número no campo `value`." },
-      { status: 400 },
-    );
+        ? body.valor
+        : typeof body.amount === "number"
+          ? body.amount
+          : undefined;
+
+  const explicitAmount = fromBody !== undefined;
+
+  if (explicitAmount) {
+    if (!Number.isFinite(fromBody)) {
+      return NextResponse.json(
+        { error: "Valor inválido. Envie um número no campo `value`." },
+        { status: 400 },
+      );
+    }
+    if (!isAllowedAmount(fromBody)) {
+      return NextResponse.json(
+        {
+          error:
+            "Valor não permitido. Use um dos valores disponíveis na página (R$1, R$5, R$10 ou R$20).",
+        },
+        { status: 400 },
+      );
+    }
   }
-  const valor = allowedValues.some((v) => v === requestedAmount)
-  ? requestedAmount
-  : defaultValue;
-  if (valor <= 0) {
+
+  const valor = explicitAmount ? fromBody! : defaultValue;
+  if (valor <= 0 || !isAllowedAmount(valor)) {
     return NextResponse.json(
-      { error: "Valor inválido. O valor deve ser maior que zero." },
+      { error: "Valor inválido." },
       { status: 400 },
     );
   }

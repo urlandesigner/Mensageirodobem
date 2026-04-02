@@ -3,16 +3,16 @@ import type { LandingStep, MessageTeaser } from "@/types/landing";
 export const LANDING_HERO = {
   eyebrow: "Mensageiro do Bem",
   title: "Há uma mensagem guardada para um momento como o seu.",
-  subtitle: "Um toque para ver o que está guardado para você.",
+  subtitle: "Um toque para descobrir o que está guardado para você.",
   ctaLabel: "Abrir minha mensagem agora",
   /** Linha logo abaixo do botão principal do hero. */
   supportLine:
-    "💛 Pode ser a frase que seu dia pediu em silêncio — e você nem sabia.",
+    "💛 Pode ser a frase que seu dia pediu em silêncio — e você nem percebeu.",
 } as const;
 
 /** Opcional: reforço leve de propósito no hero (deixe vazio para ocultar). */
 export const LANDING_HERO_PURPOSE_HINT =
-  "Com um gesto, você recebe sua mensagem e ainda apoia ajuda real para quem precisa.";
+  "Com um gesto, você recebe sua mensagem e ainda ajuda alguém de verdade.";
 
 /** Texto abaixo dos CTAs principais da landing. */
 export const LANDING_CTA_HINT = "Leva poucos segundos." as const;

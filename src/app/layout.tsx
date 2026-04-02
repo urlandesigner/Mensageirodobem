@@ -13,7 +13,7 @@ const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
   subsets: ["latin"],
   display: "swap",
-  weight: ["500", "600", "700"],
+  weight: ["500", "600"],
 });
 
 export const metadata: Metadata = {
@@ -33,6 +33,7 @@ export default function RootLayout({
   return (
     <html
       lang="pt-BR"
+      data-scroll-behavior="smooth"
       className={`${dmSans.variable} ${cormorant.variable} h-full scroll-smooth antialiased`}
     >
       <body className="flex min-h-full flex-col font-sans text-[15px] font-normal leading-relaxed text-[var(--ink)] sm:text-base">

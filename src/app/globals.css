@@ -128,6 +128,13 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* Sem isso, blocos com opacity-0 + animate-fade-up ficam invisíveis para sempre. */
+  .animate-fade-up {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
   .mensagem-soft-fade {
     animation: none;
     opacity: 1;

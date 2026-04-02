@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   DEFAULT_PAYMENT_AMOUNT,
+  PAYMENT_AMOUNT_OPTIONS,
   RECEBER_EXPECTATION,
   RECEBER_PAYMENT_RECIPIENT_HINT,
-  REQUIRES_ASAAS_FOR_PAYMENTS,
 } from "@/constants/receber";
 import { pickRandomMessage } from "@/lib/messages";
 import {
@@ -17,25 +17,11 @@ import {
 } from "@/lib/payment-session";
 import { AmountSelector } from "./AmountSelector";
 
-const ASAAS_CUSTOMER_STORAGE_KEY = "mdb_asaas_customer_id";
-
-type AsaasApiErrorFields = {
-  error?: string;
-  asaasHttpStatus?: number;
-  asaasResponseBody?: string;
-  asaasRequestUrl?: string;
-};
-
-type CreateCustomerResponse = {
-  id: string;
-  reused?: boolean;
-} & AsaasApiErrorFields;
-
 type CreatePaymentResponse = {
   paymentId: string;
   qrImageSrc: string;
   payload: string;
-} & AsaasApiErrorFields;
+};
 
 type MercadoPagoCreatePixResponse = {
   paymentId?: string;
@@ -44,18 +30,12 @@ type MercadoPagoCreatePixResponse = {
   qrCodeBase64?: string;
   status?: string;
   payload?: string;
-} & AsaasApiErrorFields;
-
-type AsaasCreatePixResponse = {
-  id?: string;
-  qrCode?: string;
-  copiaECola?: string;
-  payload?: string;
-} & AsaasApiErrorFields;
+  error?: string;
+};
 
 /** Mensagem curta para o usuário — sem URL/corpo de API (evita vazar detalhes técnicos). */
-function describeAsaasApiFailure(
-  data: AsaasApiErrorFields,
+function describePaymentApiError(
+  data: { error?: string },
   fallback: string,
 ): string {
   const raw = typeof data.error === "string" ? data.error.trim() : "";
@@ -81,49 +61,27 @@ function stepsForAmount(): readonly string[] {
   ] as const;
 }
 
-function normalizePaymentResponse(
-  provider: "mercado-pago" | "asaas",
-  data: MercadoPagoCreatePixResponse | AsaasCreatePixResponse,
+function normalizeMercadoPixResponse(
+  data: MercadoPagoCreatePixResponse,
 ): CreatePaymentResponse {
-  if (provider === "mercado-pago") {
-    const mp = data as MercadoPagoCreatePixResponse;
-    const paymentId = typeof mp.paymentId === "string" ? mp.paymentId : "";
-    const payload =
-      typeof mp.qrCode === "string" && mp.qrCode.trim().length > 0
-        ? mp.qrCode
-        : typeof mp.payload === "string"
-          ? mp.payload
-          : "";
-    const qrCodeBase64 =
-      typeof mp.qrCodeBase64 === "string" ? mp.qrCodeBase64 : "";
-    if (!paymentId || !payload || !qrCodeBase64) {
-      throw new Error(
-        "Tivemos um pequeno problema ao preparar seu pagamento. Tente novamente.",
-      );
-    }
-    return {
-      paymentId,
-      payload,
-      qrImageSrc: `data:image/jpeg;base64,${qrCodeBase64}`,
-    };
-  }
-
-  const asaas = data as AsaasCreatePixResponse;
-  const paymentId = typeof asaas.id === "string" ? asaas.id : "";
-  const qrImageSrc = typeof asaas.qrCode === "string" ? asaas.qrCode : "";
+  const paymentId = typeof data.paymentId === "string" ? data.paymentId : "";
   const payload =
-    typeof asaas.copiaECola === "string" && asaas.copiaECola.trim().length > 0
-      ? asaas.copiaECola
-      : typeof asaas.payload === "string"
-        ? asaas.payload
+    typeof data.qrCode === "string" && data.qrCode.trim().length > 0
+      ? data.qrCode
+      : typeof data.payload === "string"
+        ? data.payload
         : "";
-  if (!paymentId || !payload || !qrImageSrc) {
-    throw new Error("Resposta incompleta do Asaas.");
+  const qrCodeBase64 =
+    typeof data.qrCodeBase64 === "string" ? data.qrCodeBase64 : "";
+  if (!paymentId || !payload || !qrCodeBase64) {
+    throw new Error(
+      "Tivemos um pequeno problema ao preparar seu pagamento. Tente novamente.",
+    );
   }
   return {
     paymentId,
     payload,
-    qrImageSrc,
+    qrImageSrc: `data:image/jpeg;base64,${qrCodeBase64}`,
   };
 }
 
@@ -147,16 +105,16 @@ function PaymentStatusCard({
 
   return (
     <section
-      className={`animate-fade-up mt-4 w-full max-w-sm rounded-2xl border px-4 py-4 text-left shadow-sm ${toneClasses}`}
+      className={`w-full max-w-sm rounded-2xl border px-3 py-2.5 text-left shadow-sm sm:px-3.5 sm:py-3 ${toneClasses}`}
       role="status"
       aria-live="polite"
     >
-      <h3 className="font-sans text-sm font-semibold text-[var(--ink)]">{title}</h3>
-      <p className="mt-1.5 text-sm leading-relaxed text-[var(--muted)]">
-        {description}
-      </p>
+      <h3 className="font-sans text-sm font-semibold leading-snug text-[var(--ink)]">
+        {title}
+      </h3>
+      <p className="mt-1 text-sm leading-snug text-[var(--muted)]">{description}</p>
       {hint ? (
-        <p className="mt-2 text-xs leading-relaxed text-[var(--muted)]/90">{hint}</p>
+        <p className="mt-1.5 text-xs leading-snug text-[var(--muted)]/90">{hint}</p>
       ) : null}
     </section>
   );
@@ -164,96 +122,73 @@ function PaymentStatusCard({
 
 export function ReceberView() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [payment, setPayment] = useState<CreatePaymentResponse | null>(null);
-  const [customerId, setCustomerId] = useState<string | null>(null);
   const [selectedAmount, setSelectedAmount] = useState<number>(
     DEFAULT_PAYMENT_AMOUNT,
   );
   const [creatingPayment, setCreatingPayment] = useState(false);
   const [checking, setChecking] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
-  /** Cobrança ainda não confirmada pelo Asaas — mostra copy amigável em vez de “Status: PENDING”. */
+  /** Cobrança ainda não confirmada — mostra copy amigável em vez de “Status: PENDING”. */
   const [awaitingPaymentConfirm, setAwaitingPaymentConfirm] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [pixSectionHighlight, setPixSectionHighlight] = useState(false);
+  const pixPaymentSectionRef = useRef<HTMLDivElement>(null);
+  const jaEnviouBtnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    let cancelled = false;
+    if (!payment) {
+      setPixSectionHighlight(false);
+      return;
+    }
+    setPixSectionHighlight(true);
+    const t = window.setTimeout(() => setPixSectionHighlight(false), 2200);
+    return () => window.clearTimeout(t);
+  }, [payment]);
+
+  useLayoutEffect(() => {
+    if (!payment || loadError) return;
+    const id = window.setTimeout(() => {
+      pixPaymentSectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 120);
+    return () => window.clearTimeout(id);
+  }, [payment, loadError]);
+
+  /** Mantém o CTA visível no mobile quando o bloco de status ganha altura. */
+  useLayoutEffect(() => {
+    const hasStatus = Boolean(payError || awaitingPaymentConfirm);
+    if (!hasStatus) return;
+    const id = window.setTimeout(() => {
+      jaEnviouBtnRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "nearest",
+      });
+    }, 100);
+    return () => window.clearTimeout(id);
+  }, [payError, awaitingPaymentConfirm]);
+
+  useEffect(() => {
     setLoadError(null);
     setPayment(null);
     clearPaymentSession();
-
-    if (!REQUIRES_ASAAS_FOR_PAYMENTS) {
-      setLoading(false);
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    setLoading(true);
-
-    (async () => {
-      const readStored = () =>
-        typeof window !== "undefined"
-          ? window.localStorage.getItem(ASAAS_CUSTOMER_STORAGE_KEY)?.trim() ||
-            null
-          : null;
-
-      const createCustomer = async (): Promise<string> => {
-        const cRes = await fetch("/api/create-customer", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({}),
-        });
-        const cData = (await cRes.json()) as CreateCustomerResponse;
-        if (!cRes.ok) {
-          throw new Error(
-            describeAsaasApiFailure(
-              cData,
-              "Não foi possível garantir o cliente.",
-            ),
-          );
-        }
-        if (!cData.id) {
-          throw new Error("Resposta incompleta (cliente).");
-        }
-        try {
-          window.localStorage.setItem(ASAAS_CUSTOMER_STORAGE_KEY, cData.id);
-        } catch {
-          /* ignore quota / private mode */
-        }
-        return cData.id;
-      };
-
-      try {
-        let resolvedCustomerId = readStored();
-        if (!resolvedCustomerId) {
-          resolvedCustomerId = await createCustomer();
-        }
-        if (!cancelled) setCustomerId(resolvedCustomerId);
-      } catch (e) {
-        if (!cancelled) {
-          const msg =
-            e instanceof Error
-              ? e.message
-              : "Nao foi possivel preparar seu pagamento agora. Tente novamente em instantes.";
-          setLoadError(msg);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   const createPaymentForSelectedAmount = useCallback(async () => {
     if (creatingPayment) return;
-    const provider = selectedAmount === 1 ? "mercado-pago" : "asaas";
-    if (provider === "asaas" && !customerId) return;
+
+    const selectedOption = PAYMENT_AMOUNT_OPTIONS.find(
+      (o) => o.value === selectedAmount,
+    );
+    if (!selectedOption) {
+      setLoadError("Escolha um dos valores na lista antes de continuar.");
+      return;
+    }
+    const valueToCharge = selectedOption.value;
 
     setCreatingPayment(true);
     setLoadError(null);
@@ -261,50 +196,41 @@ export function ReceberView() {
     setPayError(null);
     setAwaitingPaymentConfirm(false);
     try {
-      const req =
-        provider === "mercado-pago"
-          ? {
-              url: "/api/create-pix",
-              body: { value: selectedAmount },
-            }
-          : {
-              url: "/api/create-payment",
-              body: { customerId, amount: selectedAmount },
-            };
-
-      const res = await fetch(req.url, {
+      const res = await fetch("/api/create-pix", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(req.body),
+        body: JSON.stringify({ value: valueToCharge }),
       });
-      const data = (await res.json()) as
-        | (MercadoPagoCreatePixResponse & { error?: string })
-        | (AsaasCreatePixResponse & { error?: string });
+      const data = (await res.json()) as MercadoPagoCreatePixResponse;
       if (!res.ok) {
         throw new Error(
-          describeAsaasApiFailure(data, "Nao foi possivel criar o pagamento."),
+          describePaymentApiError(
+            data,
+            "Não conseguimos gerar o PIX agora. Toque em Continuar de novo.",
+          ),
         );
       }
-      const normalized = normalizePaymentResponse(provider, data);
+      const normalized = normalizeMercadoPixResponse(data);
       writePaymentSession({
         paymentId: normalized.paymentId,
         paymentStatus: "pending",
         createdAt: new Date().toISOString(),
-        amount: selectedAmount,
-        paymentProvider: provider === "mercado-pago" ? "mercado-pago" : "asaas",
+        amount: valueToCharge,
+        paymentProvider: "mercado-pago",
       });
       setPayment(normalized);
     } catch (e) {
-      const rawMsg = e instanceof Error ? e.message : "Erro ao criar pagamento.";
+      const rawMsg =
+        e instanceof Error ? e.message : "Não foi possível gerar o PIX.";
       const msg =
         rawMsg.includes("Mercado Pago") || rawMsg.includes("preparar seu pagamento")
-          ? "Tivemos um pequeno problema ao preparar seu pagamento. Tente novamente."
+          ? "Tivemos um problema ao gerar seu PIX. Toque em Continuar para tentar de novo."
           : rawMsg;
       setLoadError(msg);
     } finally {
       setCreatingPayment(false);
     }
-  }, [creatingPayment, customerId, selectedAmount]);
+  }, [creatingPayment, selectedAmount]);
 
   const handleCopy = useCallback(async () => {
     if (!payment?.payload) return;
@@ -325,9 +251,7 @@ export function ReceberView() {
         : "");
     if (!paymentId) return;
     const session = typeof window !== "undefined" ? readPaymentSession() : null;
-    const statusProvider =
-      session?.paymentProvider ??
-      (selectedAmount === 1 ? "mercado-pago" : "asaas");
+    const statusProvider = session?.paymentProvider ?? "mercado-pago";
     setChecking(true);
     setPayError(null);
     setAwaitingPaymentConfirm(false);
@@ -345,8 +269,8 @@ export function ReceberView() {
         setPayError(
           data.error ??
             (res.status === 503
-              ? "Ainda nao conseguimos confirmar por aqui. Tente mais uma vez em instantes."
-              : "Nao conseguimos confirmar o pagamento agora. Tente novamente."),
+              ? "Estamos com uma instabilidade momentânea. Daqui a pouco, toque em “Já enviei” de novo."
+              : "Ainda não conseguimos confirmar. Quando o PIX sair no app do banco, toque em “Já enviei” outra vez."),
         );
         return;
       }
@@ -372,7 +296,9 @@ export function ReceberView() {
       setAwaitingPaymentConfirm(true);
     } catch {
       setAwaitingPaymentConfirm(false);
-      setPayError("Falha de rede ao consultar o status.");
+      setPayError(
+        "A conexão oscilou. Confira a internet e toque em “Já enviei” de novo.",
+      );
     } finally {
       setChecking(false);
     }
@@ -394,7 +320,7 @@ export function ReceberView() {
 
         <header className="mt-8 text-center animate-fade-up opacity-0 [animation-delay:80ms] [animation-fill-mode:forwards]">
           <p className="text-[0.7rem] font-semibold uppercase tracking-[0.28em] text-[var(--muted)]">
-            {loading ? "Preparando seu momento..." : "Quase lá"}
+            Quase lá
           </p>
           <h1 className="mt-3 font-serif text-[1.75rem] font-semibold leading-tight tracking-[-0.02em] text-[var(--ink)] sm:text-[2rem]">
             {RECEBER_EXPECTATION.title}
@@ -423,17 +349,15 @@ export function ReceberView() {
           </p>
           <button
             type="button"
-            disabled={
-              loading ||
-              creatingPayment ||
-              (selectedAmount !== 1 && !customerId)
-            }
+            disabled={creatingPayment}
+            aria-busy={creatingPayment}
             onClick={createPaymentForSelectedAmount}
-            className="inline-flex min-h-[3.25rem] w-full max-w-sm items-center justify-center rounded-full bg-[#C9785C] px-8 py-3.5 text-center text-[0.9375rem] font-semibold tracking-wide text-white shadow-[0_4px_24px_-6px_rgba(201,120,92,0.55),0_1px_0_0_rgba(255,255,255,0.2)_inset] transition duration-200 hover:!brightness-[1.06] hover:shadow-[0_6px_28px_-6px_rgba(201,120,92,0.5)] disabled:cursor-not-allowed disabled:opacity-55"
+            className="inline-flex min-h-[3.25rem] w-full max-w-sm items-center justify-center rounded-full bg-[#C9785C] px-8 py-3.5 text-center text-[0.9375rem] font-semibold tracking-wide text-white shadow-[0_4px_24px_-6px_rgba(201,120,92,0.55),0_1px_0_0_rgba(255,255,255,0.2)_inset] transition duration-200 hover:!brightness-[1.06] hover:shadow-[0_6px_28px_-6px_rgba(201,120,92,0.5)] disabled:cursor-not-allowed disabled:opacity-55 motion-safe:data-[loading=true]:animate-pulse"
+            data-loading={creatingPayment ? "true" : undefined}
           >
-            {creatingPayment ? "Preparando seu pagamento..." : "Continuar"}
+            {creatingPayment ? "Gerando seu PIX..." : "Continuar"}
           </button>
-          {REQUIRES_ASAAS_FOR_PAYMENTS ? (
+          {PAYMENT_AMOUNT_OPTIONS.length > 1 ? (
             <p className="text-center text-xs text-[var(--muted)]">
               Troque o valor quando quiser, sem complicação.
             </p>
@@ -473,13 +397,21 @@ export function ReceberView() {
               onClick={retryLoad}
               className="mt-3 text-sm font-semibold text-[var(--accent-mid)] underline-offset-2 hover:underline"
             >
-              Recarregar página
+              Atualizar e tentar de novo
             </button>
           </div>
         )}
 
         {payment && !loadError && (
-          <>
+          <div
+            ref={pixPaymentSectionRef}
+            className={`scroll-mt-6 rounded-2xl transition-[outline,outline-offset] duration-500 motion-reduce:transition-none ${
+              pixSectionHighlight
+                ? "outline outline-2 outline-offset-2 outline-[#C9785C]/35"
+                : "outline outline-2 outline-transparent outline-offset-2"
+            }`}
+            aria-label="Pagamento PIX"
+          >
             <p className="mt-7 text-center text-sm font-medium text-[var(--ink)]/85">
               Você escolheu contribuir com {formatCurrency(selectedAmount)}
             </p>
@@ -549,43 +481,36 @@ export function ReceberView() {
                 />
               </div>
             </section>
-          </>
+          </div>
         )}
 
-        <div className="mt-10 flex flex-col items-center gap-3.5">
-          <button
-            type="button"
-            disabled={loading || creatingPayment || !payment?.paymentId || checking}
-            onClick={handlePaid}
-            className="inline-flex min-h-[3.25rem] w-full max-w-sm items-center justify-center rounded-full px-8 py-3.5 text-center text-[0.9375rem] font-semibold tracking-wide text-white shadow-[0_4px_24px_-6px_rgba(201,120,92,0.55),0_1px_0_0_rgba(255,255,255,0.2)_inset] transition duration-200 hover:!brightness-[1.06] hover:shadow-[0_6px_28px_-6px_rgba(201,120,92,0.5)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C9785C] enabled:cursor-pointer enabled:bg-[#C9785C] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:min-w-[18rem]"
-          >
-            {checking ? "Conferindo..." : "Já enviei"}
-          </button>
-          <p className="text-center text-xs font-medium text-[var(--muted)]">
-            Leva poucos segundos • Sem cadastro
-          </p>
-          {checking ? (
-            <PaymentStatusCard
-              title="Estamos conferindo seu envio"
-              description="A confirmação pode levar alguns segundos para aparecer por aqui."
-            />
-          ) : null}
-          {awaitingPaymentConfirm && !checking ? (
-            <PaymentStatusCard
-              title="Ainda não apareceu por aqui"
-              description="Às vezes leva um pouco mais para atualizar."
-              hint="Se ainda não aparecer, tente novamente em instantes."
-              tone="warning"
-            />
-          ) : null}
+        <div className="mt-6 flex w-full flex-col items-center gap-2 pb-1 sm:mt-10 sm:gap-3 sm:pb-0">
           {payError ? (
             <PaymentStatusCard
-              title="Não conseguimos confirmar agora"
+              title="Não deu certo desta vez"
               description={payError}
-              hint="Tente novamente em instantes."
+              hint="Nada foi perdido: confira o PIX no banco e tente “Já enviei” quando estiver pago."
               tone="error"
             />
           ) : null}
+          {awaitingPaymentConfirm ? (
+            <PaymentStatusCard
+              title="Ainda não apareceu por aqui 💭"
+              description='Quando o pagamento aparecer como concluído no seu banco, toque em “Já enviei” novamente.'
+              tone="warning"
+            />
+          ) : null}
+          <button
+            ref={jaEnviouBtnRef}
+            type="button"
+            disabled={creatingPayment || !payment?.paymentId || checking}
+            aria-busy={checking}
+            onClick={handlePaid}
+            className="inline-flex min-h-[3.25rem] w-full max-w-sm shrink-0 items-center justify-center rounded-full px-8 py-3.5 text-center text-[0.9375rem] font-semibold tracking-wide text-white shadow-[0_4px_24px_-6px_rgba(201,120,92,0.55),0_1px_0_0_rgba(255,255,255,0.2)_inset] transition duration-200 hover:!brightness-[1.06] hover:shadow-[0_6px_28px_-6px_rgba(201,120,92,0.5)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C9785C] enabled:cursor-pointer enabled:bg-[#C9785C] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:min-w-[18rem]"
+            data-loading={checking ? "true" : undefined}
+          >
+            {checking ? "Verificando pagamento..." : "Já enviei"}
+          </button>
           <p className="max-w-xs text-center text-xs leading-relaxed text-[var(--muted)]">
             {RECEBER_EXPECTATION.microcopy}
           </p>

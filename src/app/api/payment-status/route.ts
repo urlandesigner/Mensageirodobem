@@ -19,10 +19,11 @@ export async function GET(request: Request) {
     );
   }
 
+  /** Checkout atual: Mercado Pago. `asaas` permanece só para consultas legadas. */
   const provider =
-    url.searchParams.get("provider")?.trim() === "mercado-pago"
-      ? "mercado-pago"
-      : "asaas";
+    url.searchParams.get("provider")?.trim() === "asaas"
+      ? "asaas"
+      : "mercado-pago";
 
   try {
     if (provider === "mercado-pago") {

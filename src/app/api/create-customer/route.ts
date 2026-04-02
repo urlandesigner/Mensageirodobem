@@ -7,6 +7,8 @@ import {
 } from "@/lib/asaas";
 
 /**
+ * Legado Asaas — a UI não chama mais esta rota. Mantida para testes; removível com o Asaas.
+ *
  * Route Handler do App Router: executa apenas no servidor Node, fora do bundle do cliente.
  */
 type Body = { customerId?: string };
