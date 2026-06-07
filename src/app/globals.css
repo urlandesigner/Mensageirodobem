@@ -30,6 +30,7 @@
 }
 
 body {
+  position: relative;
   background-color: var(--canvas);
   background-image: radial-gradient(
       ellipse 120% 80% at 50% -20%,
@@ -49,6 +50,94 @@ body {
   background-attachment: fixed;
   color: var(--ink);
   font-feature-settings: "kern" 1, "liga" 1;
+}
+
+/* Grão sutil de papel — adiciona textura/profundidade sem pesar. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
+}
+
+/* Garante que o conteúdo fique acima da textura. */
+body > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Carta lacrada — flutuação suave no hero. */
+@keyframes letter-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-1.4deg);
+  }
+  50% {
+    transform: translateY(-12px) rotate(-1.4deg);
+  }
+}
+
+.animate-letter-float {
+  animation: letter-float 6s var(--ease-in-out-soft) infinite;
+}
+
+/* Brilho discreto percorrendo o lacre. */
+@keyframes seal-sheen {
+  0%,
+  72%,
+  100% {
+    opacity: 0;
+    transform: translateX(-120%) rotate(25deg);
+  }
+  82% {
+    opacity: 0.85;
+  }
+  92% {
+    opacity: 0;
+    transform: translateX(140%) rotate(25deg);
+  }
+}
+
+.animate-seal-sheen {
+  animation: seal-sheen 7s ease-in-out infinite;
+}
+
+/* Brilho que cruza o CTA principal no carregamento e no hover. */
+@keyframes cta-shine {
+  from {
+    transform: translateX(-130%) skewX(-18deg);
+  }
+  to {
+    transform: translateX(230%) skewX(-18deg);
+  }
+}
+
+/* Entrada do CTA fixo mobile. */
+@keyframes sticky-rise {
+  from {
+    opacity: 0;
+    transform: translateY(120%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-sticky-rise {
+  animation: sticky-rise 0.5s var(--ease-out-soft) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-letter-float,
+  .animate-seal-sheen,
+  .animate-sticky-rise {
+    animation: none;
+  }
 }
 
 ::selection {

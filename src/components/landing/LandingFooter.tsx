@@ -12,20 +12,45 @@ export function LandingFooter() {
 
   return (
     <>
-      <footer className="border-t border-[var(--stroke)] bg-[var(--paper-warm)]/30 px-5 py-10 text-center sm:px-8">
-        <p className="text-[0.8125rem] leading-relaxed text-[var(--muted)]">
-          Mensageiro do Bem · Mensagens com carinho, para dias de todo tipo.
-        </p>
-        <p className="mx-auto mt-3 max-w-xl text-xs leading-relaxed text-[var(--muted)]/90">
-          {TRANSPARENCY_FOOTER_NOTE}
-        </p>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="mt-3 text-xs font-medium text-[var(--muted)] underline underline-offset-4 transition hover:text-[var(--accent-mid)]"
-        >
-          {TRANSPARENCY_LINK_LABEL}
-        </button>
+      <footer className="border-t border-[var(--stroke)] bg-[var(--paper-warm)]/30 px-5 py-11 text-center sm:px-8">
+        {/* Quem está por trás — reforça confiança e bate com o recebedor do PIX */}
+        <div className="flex flex-col items-center gap-2.5">
+          <span
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-b from-[var(--paper)] to-[var(--paper-warm)] font-serif text-sm font-semibold tracking-[0.04em] text-[var(--accent-mid)] shadow-[var(--shadow-ticket)] ring-1 ring-inset ring-[var(--accent)]/15"
+            aria-hidden
+          >
+            UD
+          </span>
+          <p className="text-[0.8125rem] leading-relaxed text-[var(--muted)]">
+            Um projeto de{" "}
+            <span className="font-medium text-[var(--ink)]/85">Urlan Dipré</span>
+            {" · "}
+            <a
+              href="https://udlabs.com.br"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-[var(--muted)] underline-offset-4 transition hover:text-[var(--accent-mid)] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]/35"
+            >
+              UD Labs
+            </a>
+          </p>
+        </div>
+
+        <div className="mx-auto mt-7 max-w-xl border-t border-[var(--stroke)] pt-7">
+          <p className="text-[0.8125rem] leading-relaxed text-[var(--muted)]">
+            Mensageiro do Bem · Mensagens com carinho, para dias de todo tipo.
+          </p>
+          <p className="mx-auto mt-3 text-xs leading-relaxed text-[var(--muted)]/90">
+            {TRANSPARENCY_FOOTER_NOTE}
+          </p>
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="mt-3 text-xs font-medium text-[var(--muted)] underline underline-offset-4 transition hover:text-[var(--accent-mid)]"
+          >
+            {TRANSPARENCY_LINK_LABEL}
+          </button>
+        </div>
       </footer>
 
       {open ? (

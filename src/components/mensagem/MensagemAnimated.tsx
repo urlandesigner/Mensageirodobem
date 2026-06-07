@@ -4,7 +4,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { PrimaryCta } from "@/components/landing/PrimaryCta";
 import { ShareMessageButton } from "@/components/mensagem/ShareMessageButton";
-import { MESSAGE_CONTINUITY_LINE } from "@/constants/messages";
+import { MESSAGE_CONTINUITY_LINE, SHARE_INVITE_LINE } from "@/constants/messages";
 import { formatMensagemMoment } from "@/lib/format-mensagem-moment";
 
 type RevealProps = {
@@ -59,6 +59,7 @@ export function MensagemAnimated({
   }, [messageId]);
 
   const normalizedBody = body.replace(/\n{2,}/g, "\n").trim();
+  const shareText = `${normalizedBody}\n\n${SHARE_INVITE_LINE}`;
   const amountLabel =
     typeof contributionAmount === "number"
       ? new Intl.NumberFormat("pt-BR", {
@@ -128,7 +129,7 @@ export function MensagemAnimated({
             Receber outra mensagem
           </PrimaryCta>
           <ShareMessageButton
-            shareText={normalizedBody}
+            shareText={shareText}
             variant="soft"
             forceCopy
             idleLabel="Copiar mensagem"

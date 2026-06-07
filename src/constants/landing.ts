@@ -53,14 +53,14 @@ export const FINAL_CTA = {
 } as const;
 
 export const TRANSPARENCY_FOOTER_NOTE =
-  "Parte dos valores arrecadados é destinada a ações de ajuda real." as const;
+  "A maior parte de cada contribuição é doada para ações de ajuda real. Uma parte pequena mantém o site no ar." as const;
 
 export const TRANSPARENCY_LINK_LABEL = "Como isso funciona" as const;
 
 export const TRANSPARENCY_MODAL = {
-  title: "Como isso funciona",
-  body: "O Mensageiro do Bem tem custos para continuar existindo e chegando com cuidado até você.",
-  helpLine: "Uma parte dos valores é destinada a gerar ajuda real para alguém.",
-  continuityLine: "Assim, o projeto segue vivo e o impacto pode continuar acontecendo.",
+  title: "Para onde vai o seu gesto",
+  body: "A maior parte de cada contribuição é doada para gerar ajuda real para alguém que precisa.",
+  helpLine: "Só uma parte pequena cobre os custos de manter o site no ar.",
+  continuityLine: "Assim, o projeto segue vivo e o impacto continua chegando a mais gente.",
   closeLabel: "Entendi",
 } as const;

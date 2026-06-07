@@ -17,6 +17,13 @@ export const MESSAGE_KEEP_PROMPT =
 export const MESSAGE_CONTINUITY_LINE =
   "💛 Obrigado por fazer parte disso." as const;
 
+/** URL oficial do site — fonte de verdade para links de compartilhamento. */
+export const OFFICIAL_SITE_URL = "https://www.mensageirodobem.com.br/" as const;
+
+/** Convite (com link oficial) anexado ao texto compartilhado. */
+export const SHARE_INVITE_LINE =
+  `💛 Receba a sua em ${OFFICIAL_SITE_URL}` as const;
+
 export const MOCK_MESSAGES: Message[] = [
   {
     id: "m01",
