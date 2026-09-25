@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
+import Script from "next/script";
 import { LandingFooter } from "@/components/landing/LandingFooter";
 import { PrimaryCta } from "@/components/landing/PrimaryCta";
 import { SealedLetter } from "@/components/landing/SealedLetter";
 import { StickyCta } from "@/components/landing/StickyCta";
+import { OFFICIAL_SITE_URL } from "@/constants/messages";
 import {
   LANDING_STEPS,
   LANDING_STEPS_INTRO,
@@ -10,6 +13,94 @@ import {
   MESSAGE_TEASERS_NOTE,
   MESSAGE_TEASERS_TITLE,
 } from "@/constants/landing";
+
+const HOME_TITLE = "Mensagens de carinho e apoio no momento certo";
+const HOME_DESCRIPTION =
+  "Receba uma mensagem inspiradora com acesso imediato, sem cadastro e por um valor simbólico. Um gesto simples que acolhe você e ainda ajuda quem precisa.";
+
+const faqs = [
+  {
+    question: "Como funciona o Mensageiro do Bem?",
+    answer:
+      "Você faz uma contribuição simbólica, confirma o pagamento e recebe na hora uma mensagem curta, carinhosa e inspiradora.",
+  },
+  {
+    question: "Preciso fazer cadastro para receber a mensagem?",
+    answer:
+      "Não. O processo foi pensado para ser rápido e simples, sem exigir cadastro antes de abrir a sua mensagem.",
+  },
+  {
+    question: "O pagamento é somente por PIX?",
+    answer:
+      "A página de recebimento foi desenhada para liberar o acesso com PIX de forma prática e imediata.",
+  },
+  {
+    question: "Parte do valor realmente vira ajuda?",
+    answer:
+      "Sim. A maior parte de cada contribuição é destinada a ajudar quem precisa, e uma parcela menor sustenta a operação do site.",
+  },
+];
+
+const homeStructuredData = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": `${OFFICIAL_SITE_URL}#webpage`,
+      url: OFFICIAL_SITE_URL,
+      name: HOME_TITLE,
+      description: HOME_DESCRIPTION,
+      inLanguage: "pt-BR",
+      isPartOf: {
+        "@id": `${OFFICIAL_SITE_URL}#website`,
+      },
+    },
+    {
+      "@type": "Service",
+      "@id": `${OFFICIAL_SITE_URL}#service`,
+      serviceType: "Mensagens inspiradoras com acesso imediato",
+      name: "Mensageiro do Bem",
+      description: HOME_DESCRIPTION,
+      areaServed: "BR",
+      availableChannel: {
+        "@type": "ServiceChannel",
+        serviceUrl: `${OFFICIAL_SITE_URL}receber`,
+      },
+      provider: {
+        "@id": `${OFFICIAL_SITE_URL}#organization`,
+      },
+    },
+    {
+      "@type": "FAQPage",
+      "@id": `${OFFICIAL_SITE_URL}#faq`,
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: faq.answer,
+        },
+      })),
+    },
+  ],
+};
+
+export const metadata: Metadata = {
+  title: HOME_TITLE,
+  description: HOME_DESCRIPTION,
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: HOME_TITLE,
+    description: HOME_DESCRIPTION,
+    url: "/",
+  },
+  twitter: {
+    title: HOME_TITLE,
+    description: HOME_DESCRIPTION,
+  },
+};
 
 const testimonials = [
   {
@@ -87,6 +178,11 @@ function RepeatedCta({ className = "" }: { className?: string }) {
 export default function Home() {
   return (
     <div className="min-h-full">
+      <Script
+        id="home-structured-data"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(homeStructuredData) }}
+      />
       <main>
         {/* HERO */}
         <header className="relative overflow-hidden px-5 pb-16 pt-14 sm:px-8 sm:pb-24 sm:pt-20 md:pb-28 md:pt-24">
@@ -398,6 +494,35 @@ export default function Home() {
               pouco que sobra mantém esse cuidado de pé — para continuar chegando a
               mais gente.
             </p>
+          </div>
+        </section>
+
+        <section className="border-t border-[var(--stroke)] bg-[var(--paper)] px-5 py-18 sm:px-8 sm:py-24">
+          <div className="mx-auto max-w-3xl">
+            <div className="mx-auto max-w-2xl text-center">
+              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
+                Perguntas frequentes
+              </p>
+              <h2 className="mt-4 font-serif text-[2rem] font-semibold leading-tight tracking-[-0.03em] text-[var(--ink)] sm:text-[2.6rem]">
+                O que você pode querer saber antes de abrir a sua mensagem.
+              </h2>
+            </div>
+
+            <div className="mt-10 space-y-4">
+              {faqs.map((faq) => (
+                <details
+                  key={faq.question}
+                  className="rounded-[1.5rem] border border-[var(--stroke)] bg-[var(--paper-warm)]/50 px-6 py-5 shadow-[var(--shadow-ticket)]"
+                >
+                  <summary className="cursor-pointer list-none pr-8 font-serif text-[1.2rem] font-semibold leading-7 text-[var(--ink)] marker:hidden">
+                    {faq.question}
+                  </summary>
+                  <p className="mt-3 text-[0.98rem] leading-7 text-[var(--muted)]">
+                    {faq.answer}
+                  </p>
+                </details>
+              ))}
+            </div>
           </div>
         </section>
 

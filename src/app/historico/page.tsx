@@ -5,6 +5,7 @@ import { HistoricoClient } from "@/components/historico/HistoricoClient";
 export const metadata: Metadata = {
   title: "Histórico · Mensageiro do Bem",
   description: "Mensagens que você já recebeu neste aparelho.",
+  robots: { index: false, follow: false },
 };
 
 export default function HistoricoPage() {

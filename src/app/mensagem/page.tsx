@@ -5,6 +5,7 @@ import { MensagemGate } from "@/components/mensagem/MensagemGate";
 export const metadata: Metadata = {
   title: "Sua mensagem · Mensageiro do Bem",
   description: "Um momento só seu — mensagem recebida com carinho.",
+  robots: { index: false, follow: false },
 };
 
 function MensagemFallback() {

@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: "Templates de E-mail · Mensageiro do Bem",
   description:
     "Preview interno dos templates de e-mail do Mensageiro do Bem.",
+  robots: { index: false, follow: false },
 };
 
 export default function EmailTemplatesPage() {
